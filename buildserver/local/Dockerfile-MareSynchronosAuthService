@@ -1,0 +1,32 @@
+FROM mcr.microsoft.com/dotnet/sdk:9.0 as BUILD
+
+COPY sourcefiles/MareAPI /sourcefiles/server/MareAPI
+COPY sourcefiles/server/MareSynchronosServer/MareSynchronosShared /sourcefiles/server/MareSynchronosServer/MareSynchronosShared
+COPY sourcefiles/server/MareSynchronosServer/MareSynchronosAuthService /sourcefiles/server/MareSynchronosServer/MareSynchronosAuthService
+
+WORKDIR /sourcefiles/server/MareSynchronosServer/MareSynchronosAuthService/
+
+RUN dotnet publish \
+        --configuration=Debug \
+        --os=linux \
+        --output=/build \
+        MareSynchronosAuthService.csproj
+
+FROM mcr.microsoft.com/dotnet/aspnet:9.0
+
+RUN adduser \
+        --disabled-password \
+        --group \
+        --no-create-home \
+        --quiet \
+        --system \
+        mare
+
+COPY --from=BUILD /build /opt/MareSynchronosAuthService
+RUN chown -R mare:mare /opt/MareSynchronosAuthService
+RUN apt-get update; apt-get install curl -y
+
+USER mare:mare
+WORKDIR /opt/MareSynchronosAuthService
+
+CMD ["./MareSynchronosAuthService"]
