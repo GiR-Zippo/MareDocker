@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:9.0 as BUILD
+FROM mcr.microsoft.com/dotnet/sdk:10.0 as BUILD
 
 RUN git clone --recurse-submodules https://github.com/GiR-Zippo/MareServers.git server
 
@@ -10,21 +10,17 @@ RUN dotnet publish \
         --output=/MareSynchronosAuthService \
         MareSynchronosAuthService.csproj
 
-FROM mcr.microsoft.com/dotnet/aspnet:9.0
+FROM mcr.microsoft.com/dotnet/aspnet:10.0
 
-RUN adduser \
-        --disabled-password \
-        --group \
-        --no-create-home \
-        --quiet \
-        --system \
-        mare
+# Verwende useradd statt adduser
+RUN useradd --system --no-create-home --user-group mare
 
 COPY --from=BUILD /MareSynchronosAuthService /opt/MareSynchronosAuthService
 RUN chown -R mare:mare /opt/MareSynchronosAuthService
-RUN apt-get update; apt-get install curl -y
+RUN apt-get update && apt-get install curl -y && rm -rf /var/lib/apt/lists/*
 
 USER mare:mare
 WORKDIR /opt/MareSynchronosAuthService
 
 CMD ["./MareSynchronosAuthService"]
+
